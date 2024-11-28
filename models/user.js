@@ -13,20 +13,33 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true // Asegura que el correo sea único
+    unique: true,
+    validate: {
+      validator: function (v) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      },
+      message: props => `${props.value} no es un correo válido`
+    }
   },
   password: {
     type: String,
-    required: true
+    required: true,
+    minlength: 8
   },
-  suscripcion: { // Datos de la suscripción
-    endpoint: { type: String, unique: true }, // Única a nivel global
-    expirationTime: { type: Date },
+  suscripcion: {
+    endpoint: { type: String, unique: true },
+    expirationTime: { type: Date, required: false },
     keys: {
-      p256dh: { type: String },
-      auth: { type: String }
+      p256dh: { type: String, required: false },
+      auth: { type: String, required: false }
     }
   }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Usuarios', userSchema);
+// Índice único condicional para endpoint
+userSchema.index(
+  { 'suscripcion.endpoint': 1 },
+  { unique: true, partialFilterExpression: { 'suscripcion.endpoint': { $exists: true, $ne: null } } }
+);
+
+module.exports = mongoose.model('Usuario', userSchema);
